@@ -14,7 +14,9 @@
 #define TEST_BIT(value,bit)			(((value) & BIT_MASK(bit)) ? 1 : 0)
 #define SET_BITS(value, mask, newvalue)		(value = (value & ~mask) | (newvalue & mask))
 
-int output = 0;
+int buzzz = 50;
+int held = 0;
+int output = 0; int last_output = 0;
 int map[4][4] = {
 		{261, 293, 329, 0},
 		{349, 392, 440, 0},
@@ -63,7 +65,31 @@ void keypad()
 			int found = (GPIOC->IDR >> (0+row)) & 0b1;
 			if(found == 0b1)
 			{
+				last_output = output;
 				output = map[row][col];
+
+
+
+				if(output == '-')
+				{
+					if(output == last_output)
+						return;
+					if(buzzz < 90)
+						buzzz += 5;
+					output = 0;
+				}
+				if(output == '+')
+				{
+					if(output == last_output)
+						return;
+					if(buzzz > 10)
+						buzzz -= 5;
+					output = 0;
+				}
+
+
+
+
 				return;
 			}
 			else
@@ -100,18 +126,14 @@ int main()
 	while(1)
 	{
 		keypad();
-		if(output == '-' || output == '+')
+		if(output != 0)
 		{
-			if(output > 0)
-			{
-				TIM5->CCR1 = 50;
-				TIM5->PSC = 4000000/(output*100);
-			}
-			else
-			{
-				TIM5->CCR1 = 0;
-				TIM5->PSC = 4000000/(output*100);
-			}
+			TIM5->CCR1 = buzzz;
+			TIM5->PSC = 4000000/(output*100);
+		}
+		else
+		{
+			TIM5->CCR1 = 0;
 		}
 
 		busy_sleep(1000);
